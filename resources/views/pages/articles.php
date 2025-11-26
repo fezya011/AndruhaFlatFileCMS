@@ -23,10 +23,10 @@
                 <div class="stat-label">Год последней статьи</div>
             </div>
         </div>
-        
+
         <div class="articles-list">
             <?php if (!empty($posts)): ?>
-                <?php foreach ($posts as $index => $post): 
+                <?php foreach ($posts as $index => $post):
                     $meta = [];
                     if (preg_match('/^---\s*\n(.*?)\n---/s', $post['content'] ?? '', $matches)) {
                         $lines = explode("\n", $matches[1]);
@@ -37,11 +37,11 @@
                             }
                         }
                     }
-                    
+
                     $slug = $post['slug'] ?? '';
                     $excerpt = strip_tags($post['content'] ?? '');
                     $excerpt = strlen($excerpt) > 150 ? substr($excerpt, 0, 150) . '...' : $excerpt;
-                    
+
                     // Определяем иконку по индексу
                     $icons = ['📖', '✨', '🚀', '💡', '🎯', '🔥'];
                     $icon = $icons[$index % count($icons)];
@@ -50,7 +50,7 @@
                     <div class="article-badge">
                         <?= $icon ?>
                     </div>
-                    
+
                     <div class="article-header">
                         <h3><?= htmlspecialchars($meta['title'] ?? 'Без названия') ?></h3>
                         <div class="article-meta">
@@ -61,11 +61,11 @@
                             <span class="read-time"><i class="fas fa-clock"></i> <?= $post['read_time'] ?? '3' ?> мин.</span>
                         </div>
                     </div>
-                    
+
                     <div class="article-excerpt">
                         <?= $excerpt ?>
                     </div>
-                    
+
                     <div class="article-tags">
                         <?php if (!empty($meta['tags'])): ?>
                             <?php $tags = explode(',', $meta['tags']); ?>
@@ -77,7 +77,7 @@
                             <span class="tag">Веб-разработка</span>
                         <?php endif; ?>
                     </div>
-                    
+
                     <?php if ($slug): ?>
                         <a href="/post/<?= $slug ?>" class="read-more-btn">
                             <span>Читать статью</span>
@@ -370,36 +370,36 @@
     .articles-page {
         padding: 1rem 0;
     }
-    
+
     .articles-stats {
         grid-template-columns: repeat(2, 1fr);
     }
-    
+
     .article-card {
         padding: 2rem 1.5rem;
     }
-    
+
     .article-card h3 {
         font-size: 1.3rem;
         padding-right: 0;
     }
-    
+
     .article-meta {
         flex-direction: column;
         gap: 0.5rem;
     }
-    
+
     .article-badge {
         position: relative;
         top: auto;
         right: auto;
         margin-bottom: 1rem;
     }
-    
+
     .empty-state {
         padding: 3rem 1.5rem;
     }
-    
+
     .cta-actions {
         flex-direction: column;
         align-items: center;
@@ -410,7 +410,7 @@
     .articles-stats {
         grid-template-columns: 1fr;
     }
-    
+
     .articles-stats .stat-number {
         font-size: 2rem;
     }
@@ -430,7 +430,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }, { threshold: 0.1 });
-    
+
     document.querySelectorAll('[data-aos]').forEach(el => observer.observe(el));
 });
 </script>

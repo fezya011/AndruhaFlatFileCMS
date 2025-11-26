@@ -2,32 +2,23 @@
 
 namespace App\Controllers;
 
-use App\Core\Template;
 use App\Core\Auth;
-use App\Models\ContentManager;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
 
-class PageController
+class PageController extends BaseController
 {
-    private $template;
-    private $contentManager;
-    
-    public function __construct()
-    {
-        $this->template = new Template();
-        $this->contentManager = new ContentManager();
-    }
-    
-    public function home()
+    public function home(ServerRequestInterface $request): ResponseInterface
     {
         try {
             $content = $this->contentManager->getPage('home');
             $posts = $this->contentManager->getAllPosts(3);
-            
+
             if (!$content) {
                 $content = $this->getDefaultHomeContent();
             }
-            
-             $this->template->render('home', [
+
+            return $this->render('home', [
                 'content' => $content,
                 'posts' => $posts,
                 'title' => $content['meta']['title'] ?? 'Годованский Андрей - Веб-разработчик'
@@ -36,45 +27,29 @@ class PageController
             return $this->showError($e->getMessage());
         }
     }
-    
-    public function showPage($pageName)
+
+    public function showAbout(ServerRequestInterface $request): ResponseInterface
     {
-        try {
-            $content = $this->contentManager->getPage($pageName);
-            
-            if (!$content) {
-                return $this->show404();
-            }
-            
-            $specialTemplates = ['about', 'contact', 'articles'];
-            if (in_array($pageName, $specialTemplates)) {
-                return $this->template->render($pageName, [
-                    'content' => $content,
-                    'title' => $content['meta']['title'] ?? ucfirst($pageName)
-                ]);
-            }
-            
-            $this->template->render('page', [
-                'content' => $content,
-                'title' => $content['meta']['title'] ?? ucfirst($pageName)
-            ]);
-        } catch (\Exception $e) {
-            return $this->showError($e->getMessage());
-        }
+        return $this->showSpecificPage('about');
     }
-    
-    public function showArticles()
+
+    public function showContact(ServerRequestInterface $request): ResponseInterface
+    {
+        return $this->showSpecificPage('contact');
+    }
+
+    public function showArticles(ServerRequestInterface $request): ResponseInterface
     {
         try {
             $posts = $this->contentManager->getAllPosts();
-            
+
             $postsWithReadTime = [];
             foreach ($posts as $post) {
                 $post['read_time'] = $this->calculateReadTime($post['content'] ?? '');
                 $postsWithReadTime[] = $post;
             }
-            
-            $this->template->render('articles', [
+
+            return $this->render('articles', [
                 'posts' => $postsWithReadTime,
                 'title' => 'Статьи - Годованский Андрей'
             ]);
@@ -82,34 +57,108 @@ class PageController
             return $this->showError($e->getMessage());
         }
     }
-    
-    public function showPost($postSlug)
+
+    public function showPost(ServerRequestInterface $request, array $args): ResponseInterface
     {
+        // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        echo '<pre>';print_r($request->getAttribute('slug'));echo '</pre>';exit();
+        // +++++++++++++++++++++++++++++++++++++++++++++
         try {
-            $post = $this->contentManager->getPost($postSlug);
-            
-            if (!$post) {
+            $route = $request->getAttribute('route');
+            $postSlug = '';
+
+            if ($route) {
+                $routeArgs = $route->getVars();
+                $postSlug = $routeArgs['slug'] ?? '';
+            }
+
+            if (empty($postSlug)) {
+                error_log("Empty post slug!");
                 return $this->show404();
             }
-            
-            $this->template->render('post', [
+
+            error_log("Getting post from ContentManager: " . $postSlug);
+            $post = $this->contentManager->getPost($postSlug);
+
+            if (!$post) {
+                error_log("Post not found in ContentManager: " . $postSlug);
+                return $this->show404();
+            }
+
+            error_log("Post found, title: " . ($post['meta']['title'] ?? 'NO TITLE'));
+
+            return $this->render('post', [
                 'post' => $post,
                 'title' => $post['meta']['title'] ?? 'Статья'
             ]);
         } catch (\Exception $e) {
-            $this->showError($e->getMessage());
+            error_log("Error in showPost: " . $e->getMessage());
+            error_log("Stack trace: " . $e->getTraceAsString());
+            return $this->showError($e->getMessage());
         }
     }
-    
-    private function calculateReadTime($content)
+    public function showPage(ServerRequestInterface $request): ResponseInterface
+    {
+        try {
+            $route = $request->getAttribute('route');
+            $pageName = $route ? ($route->getVars()['page'] ?? '') : '';
+
+
+            if ($pageName === 'post' || $pageName === 'posts') {
+                return $this->show404();
+            }
+
+
+            if (empty($pageName) || $pageName === '/') {
+                return $this->redirect('/');
+            }
+
+            $reserved = ['admin', 'api', 'assets', 'media', 'vendor', 'about', 'articles', 'contact', 'debug'];
+            if (in_array($pageName, $reserved)) {
+                return $this->show404();
+            }
+
+            $content = $this->contentManager->getPage($pageName);
+            if (!$content) {
+                return $this->show404();
+            }
+
+            return $this->render('page', [
+                'content' => $content,
+                'title' => $content['meta']['title'] ?? ucfirst($pageName)
+            ]);
+        } catch (\Exception $e) {
+            return $this->showError($e->getMessage());
+        }
+    }
+
+    private function showSpecificPage(string $pageName): ResponseInterface
+    {
+        try {
+            $content = $this->contentManager->getPage($pageName);
+
+            if (!$content) {
+                return $this->show404();
+            }
+
+            return $this->render($pageName, [
+                'content' => $content,
+                'title' => $content['meta']['title'] ?? ucfirst($pageName)
+            ]);
+        } catch (\Exception $e) {
+            return $this->showError($e->getMessage());
+        }
+    }
+
+    private function calculateReadTime($content): int
     {
         $text = strip_tags($content ?? '');
         $wordCount = str_word_count($text);
         $minutes = ceil($wordCount / 200);
         return max(1, $minutes);
     }
-    
-    private function getDefaultHomeContent()
+
+    private function getDefaultHomeContent(): array
     {
         return [
             'meta' => [
@@ -119,9 +168,10 @@ class PageController
             'content' => $this->getDefaultHomeHTML()
         ];
     }
-    
-    private function getDefaultHomeHTML()
+
+    private function getDefaultHomeHTML(): string
     {
+        // ... тот же HTML код что и раньше
         return '
             <section class="hero-section fade-in-up">
                 <div class="hero-content">
@@ -148,7 +198,7 @@ class PageController
                             <span>Контакты</span>
                         </a>
                         ' . (Auth::check() ? '
-                        <a href="/admin.php" class="nav-btn admin-btn">
+                        <a href="/admin" class="nav-btn admin-btn">
                             <div class="nav-icon">
                                 <i class="fas fa-cog"></i>
                             </div>
@@ -207,21 +257,19 @@ class PageController
                 </div>
             </div>';
     }
-    
-    private function show404()
+
+    private function show404(): ResponseInterface
     {
-        http_response_code(404);
-        $this->template->render('404', [
+        return $this->render('404', [
             'title' => '404 - Страница не найдена'
-        ]);
+        ])->withStatus(404);
     }
-    
-    private function showError($message)
+
+    private function showError(string $message): ResponseInterface
     {
-        http_response_code(500);
-        $this->template->render('error', [
+        return $this->render('error', [
             'title' => 'Ошибка',
             'message' => $message
-        ]);
+        ])->withStatus(500);
     }
 }

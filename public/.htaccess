@@ -1,4 +1,4 @@
-# Запрет доступа к敏感льным файлам
+# Запрет доступа к локальным файлам
 <FilesMatch "\.(md|json|yml|yaml|lock|phar)$">
     Deny from all
 </FilesMatch>
@@ -15,19 +15,15 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
     
-    # Блокируем попытки доступа к敏感льным директориям
+    # Блокируем попытки доступа к локальным директориям
     RewriteRule ^(app|config|content|vendor)/ - [F,L]
     
-    # ЧПУ для статей
-    RewriteRule ^post/([a-z0-9-]+)$ index.php?route=post&slug=$1 [L,QSA]
-    
-    # Главная страница
-    RewriteRule ^$ index.php [L]
-    
-    # Статические страницы
+    # Пропускаем существующие файлы и директории
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteRule ^([a-z0-9-]+)$ index.php?route=page&name=$1 [L,QSA]
+
+    # Перенаправляем все запросы на index.php (для PSR-7 роутера)
+    RewriteRule ^(.*)$ index.php [QSA,L]
 </IfModule>
 
 # Кэширование статических файлов

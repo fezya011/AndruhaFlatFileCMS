@@ -1,3 +1,9 @@
+<?php
+// Устанавливаем значения по умолчанию для переменных
+$title = $title ?? 'Вход в панель управления';
+$error = $error ?? null;
+?>
+
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -6,7 +12,7 @@
     <title><?= $title ?></title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { 
+        body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
@@ -83,32 +89,32 @@
     </style>
 </head>
 <body>
-    <div class="login-container">
-        <h1>Вход в панель управления</h1>
-        
-        <?php if (isset($error)): ?>
-            <div class="error"><?= $error ?></div>
-        <?php endif; ?>
-        
-        <form method="POST">
-            <div class="form-group">
-                <label for="username">Логин:</label>
-                <input type="text" id="username" name="username" required value="admin">
-            </div>
-            
-            <div class="form-group">
-                <label for="password">Пароль:</label>
-                <input type="password" id="password" name="password" required value="admin123">
-            </div>
-            
-            <button type="submit" class="btn">Войти</button>
-        </form>
-        
-        <div class="login-info">
-            <strong>Тестовые данные:</strong><br>
-            Логин: admin<br>
-            Пароль: admin123
+<div class="login-container">
+    <h1>Вход в панель управления</h1>
+
+    <?php if ($error): ?>
+        <div class="error"><?= $error ?></div>
+    <?php endif; ?>
+
+    <form method="POST">
+        <div class="form-group">
+            <label for="username">Логин:</label>
+            <input type="text" id="username" name="username" required value="admin">
         </div>
+
+        <div class="form-group">
+            <label for="password">Пароль:</label>
+            <input type="password" id="password" name="password" required value="admin123">
+        </div>
+
+        <button type="submit" class="btn">Войти</button>
+    </form>
+
+    <div class="login-info">
+        <strong>Тестовые данные:</strong><br>
+        Логин: admin<br>
+        Пароль: admin123
     </div>
+</div>
 </body>
 </html>

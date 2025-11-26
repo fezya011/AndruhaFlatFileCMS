@@ -2,36 +2,36 @@
 
 namespace App\Controllers;
 
-use App\Core\Template;
 use App\Core\Auth;
 use App\Core\Security;
-use App\Models\ContentManager;
 use App\Services\FileUploader;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
 
-class AdminController
+class AdminController extends BaseController
 {
-    private $template;
-    private $contentManager;
-    private $fileUploader;
-    
-    public function __construct()
-    {
-        $this->template = new Template();
-        $this->contentManager = new ContentManager();
-        $this->fileUploader = new FileUploader();
-        
-        if (!$this->isLoginPage() && !Auth::check()) {
-            $this->redirect('/admin.php?action=login');
-        }
+    private FileUploader $fileUploader;
+
+    public function __construct(
+        \App\Core\Template $template,
+        \App\Models\ContentManager $contentManager,
+        FileUploader $fileUploader
+    ) {
+        parent::__construct($template, $contentManager);
+        $this->fileUploader = $fileUploader;
     }
-    
-    public function dashboard()
+
+    public function dashboard(ServerRequestInterface $request): ResponseInterface
     {
+        if (!$this->checkAuth()) {
+            return $this->redirect('/admin/login');
+        }
+
         $pages = $this->contentManager->getAllPages();
         $posts = $this->contentManager->getAllPosts();
         $mediaFiles = $this->contentManager->getMediaFiles();
-        
-        return $this->template->render('admin/dashboard', [
+
+        return $this->render('admin/dashboard', [
             'title' => 'Дашборд',
             'icon' => 'tachometer-alt',
             'pages' => $pages,
@@ -39,98 +39,132 @@ class AdminController
             'mediaFiles' => $mediaFiles
         ]);
     }
-    
-    public function login()
+
+    public function login(ServerRequestInterface $request): ResponseInterface
     {
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $username = $_POST['username'] ?? '';
-            $password = $_POST['password'] ?? '';
-            
+        // Если уже авторизован - редирект в админку
+        if (Auth::check()) {
+            return $this->redirect('/admin');
+        }
+
+        $error = null;
+
+        if ($request->getMethod() === 'POST') {
+            $data = $request->getParsedBody();
+            $username = $data['username'] ?? '';
+            $password = $data['password'] ?? '';
+
             if (Auth::login($username, $password)) {
-                $this->redirect('/admin.php');
+                return $this->redirect('/admin');
             } else {
                 $error = 'Неверные учетные данные';
             }
         }
-        
-        return $this->template->render('admin/login', [
+
+        return $this->render('admin/login', [
             'title' => 'Вход в панель управления',
-            'error' => $error ?? null
+            'error' => $error
         ]);
     }
-    
-    public function logout()
+
+    public function logout(ServerRequestInterface $request): ResponseInterface
     {
         Auth::logout();
-        $this->redirect('/admin.php?action=login');
+        return $this->redirect('/admin/login');
     }
-    
-    public function editPost()
-{
-    $postSlug = $_GET['post'] ?? '';
-    $isNew = empty($postSlug);
-    
-    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        $title = Security::sanitizeInput($_POST['title'] ?? '');
-        $content = $_POST['content'] ?? '';
-        $slug = Security::sanitizeInput($_POST['slug'] ?? '');
-        
-        if ($title && $content && $slug && Security::validateSlug($slug)) {
-            $frontMatter = "---\ntitle: \"{$title}\"\ndate: \"" . date('Y-m-d') . "\"\n---\n\n";
-            $fullContent = $frontMatter . $content;
-            
-            if ($this->contentManager->savePost($slug, $fullContent)) {
-                $this->redirect('/admin.php?action=edit_post&post=' . $slug . '&saved=1');
-            }
-        }
-    }
-    
-    // Загрузка данных для формы
-    $postData = null;
-    $content = '';
-    
-    if ($postSlug) {
-        $postData = $this->contentManager->getPost($postSlug);
-        $content = $postData['raw_content'] ?? '';
-    } else {
-        $content = "## Введение\n\nНачните писать вашу статью здесь...\n\n## Основная часть\n\n## Заключение";
-        $postData = ['meta' => ['title' => '']];
-    }
-    
-    $this->template->render('admin/edit_post', [
-        'title' => $isNew ? 'Создать статью' : 'Редактирование статьи',
-        'postSlug' => $postSlug,
-        'content' => $content,
-        'postData' => $postData,
-        'isNew' => $isNew,
-        'saved' => isset($_GET['saved'])
-    ]);
-}
 
-public function editPage()
+    public function editPost(ServerRequestInterface $request): ResponseInterface
     {
-        $pageName = $_GET['page'] ?? '';
+        if (!$this->checkAuth()) {
+            return $this->redirect('/admin/login');
+        }
+
+        // Получаем параметры из query string
+        $queryParams = $request->getQueryParams();
+        $postSlug = $queryParams['post'] ?? '';
+        $isNew = empty($postSlug);
+
+        // Инициализируем переменные
+        $postData = null;
+        $content = '';
+        $saved = false;
+
+        if ($request->getMethod() === 'POST') {
+            $data = $request->getParsedBody();
+            $title = Security::sanitizeInput($data['title'] ?? '');
+            $content = $data['content'] ?? '';
+            $slug = Security::sanitizeInput($data['slug'] ?? '');
+
+            if ($title && $content && $slug && Security::validateSlug($slug)) {
+                $frontMatter = "---\ntitle: \"{$title}\"\ndate: \"" . date('Y-m-d') . "\"\n---\n\n";
+                $fullContent = $frontMatter . $content;
+
+                if ($this->contentManager->savePost($slug, $fullContent)) {
+                    $saved = true;
+                    return $this->redirect('/admin/edit_post?post=' . $slug . '&saved=1');
+                }
+            }
+        } else {
+            // Для GET запроса проверяем параметр saved
+            $saved = isset($queryParams['saved']);
+        }
+
+        // Загрузка данных для формы
+        if ($postSlug) {
+            $postData = $this->contentManager->getPost($postSlug);
+            $content = $postData['raw_content'] ?? '';
+        } else {
+            $content = "## Введение\n\nНачните писать вашу статью здесь...\n\n## Основная часть\n\n## Заключение";
+            $postData = ['meta' => ['title' => '']];
+        }
+
+        return $this->render('admin/edit_post', [
+            'title' => $isNew ? 'Создать статью' : 'Редактирование статьи',
+            'postSlug' => $postSlug,
+            'content' => $content,
+            'postData' => $postData,
+            'isNew' => $isNew,
+            'saved' => $saved
+        ]);
+    }
+
+    public function editPage(ServerRequestInterface $request): ResponseInterface
+    {
+        if (!$this->checkAuth()) {
+            return $this->redirect('/admin/login');
+        }
+
+        // Получаем параметры из query string
+        $queryParams = $request->getQueryParams();
+        $pageName = $queryParams['page'] ?? '';
         $isNew = empty($pageName);
-        
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $pageName = Security::sanitizeInput($_POST['page_name'] ?? '');
-            $title = Security::sanitizeInput($_POST['title'] ?? '');
-            $content = $_POST['content'] ?? '';
-            
+
+        // Инициализируем переменные
+        $pageData = null;
+        $content = '';
+        $saved = false;
+
+        if ($request->getMethod() === 'POST') {
+            $data = $request->getParsedBody();
+            $pageName = Security::sanitizeInput($data['page_name'] ?? '');
+            $title = Security::sanitizeInput($data['title'] ?? '');
+            $content = $data['content'] ?? '';
+
             if ($pageName && $title && $content) {
                 $frontMatter = "---\ntitle: \"{$title}\"\ndate: \"" . date('Y-m-d') . "\"\n---\n\n";
                 $fullContent = $frontMatter . $content;
-                
+
                 if ($this->contentManager->savePage($pageName, $fullContent)) {
-                    $this->redirect('/admin.php?action=edit_page&page=' . $pageName . '&saved=1');
+                    $saved = true;
+                    return $this->redirect('/admin/edit_page?page=' . $pageName . '&saved=1');
                 }
             }
+        } else {
+            // Для GET запроса проверяем параметр saved
+            $saved = isset($queryParams['saved']);
         }
-        
+
         // Загрузка данных для формы
-        $pageData = null;
-        $content = '';
-        
         if ($pageName) {
             $pageData = $this->contentManager->getPage($pageName);
             $content = $pageData['raw_content'] ?? '';
@@ -138,37 +172,55 @@ public function editPage()
             $content = "## Заголовок\n\nНачните писать содержимое страницы здесь...";
             $pageData = ['meta' => ['title' => '']];
         }
-        
-        $this->template->render('admin/edit_page', [
+
+        return $this->render('admin/edit_page', [
             'title' => $isNew ? 'Создать страницу' : 'Редактирование страницы',
             'pageName' => $pageName,
             'content' => $content,
             'pageData' => $pageData,
             'isNew' => $isNew,
-            'saved' => isset($_GET['saved'])
+            'saved' => $saved
         ]);
     }
-        
-    public function uploadMedia()
+
+    public function uploadMedia(ServerRequestInterface $request): ResponseInterface
     {
+        if (!$this->checkAuth()) {
+            return $this->redirect('/admin/login');
+        }
+
         $message = null;
         $messageType = '';
 
-        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['file'])) {
-            $result = $this->fileUploader->handleUpload($_FILES['file']);
-            
-            if ($result['success']) {
-                $message = 'Файл успешно загружен!';
-                $messageType = 'success';
+        if ($request->getMethod() === 'POST') {
+            $files = $request->getUploadedFiles();
+            $file = $files['file'] ?? null;
+
+            if ($file && $file->getError() === UPLOAD_ERR_OK) {
+                $result = $this->fileUploader->handleUpload([
+                    'name' => $file->getClientFilename(),
+                    'type' => $file->getClientMediaType(),
+                    'tmp_name' => $file->getStream()->getMetadata('uri'),
+                    'error' => $file->getError(),
+                    'size' => $file->getSize()
+                ]);
+
+                if ($result['success']) {
+                    $message = 'Файл успешно загружен!';
+                    $messageType = 'success';
+                } else {
+                    $message = $result['error'];
+                    $messageType = 'error';
+                }
             } else {
-                $message = $result['error'];
+                $message = 'Ошибка загрузки файла';
                 $messageType = 'error';
             }
         }
 
         $mediaFiles = $this->contentManager->getMediaFiles();
-        
-        return $this->template->render('admin/upload_media', [
+
+        return $this->render('admin/upload_media', [
             'title' => 'Загрузка медиафайлов',
             'icon' => 'images',
             'mediaFiles' => $mediaFiles,
@@ -176,46 +228,64 @@ public function editPage()
             'messageType' => $messageType
         ]);
     }
-    
-    public function deletePost()
+
+    public function deletePost(ServerRequestInterface $request): ResponseInterface
     {
-        $postSlug = $_GET['post'] ?? '';
-        
+        if (!$this->checkAuth()) {
+            return $this->redirect('/admin/login');
+        }
+
+        $queryParams = $request->getQueryParams();
+        $postSlug = $queryParams['post'] ?? '';
+
         if ($postSlug) {
             $this->contentManager->deletePost($postSlug);
-            $this->redirect('/admin.php?action=manage_posts&deleted=1');
+            return $this->redirect('/admin/manage_posts?deleted=1');
         }
-        
-        $this->redirect('/admin.php?action=manage_posts');
+
+        return $this->redirect('/admin/manage_posts');
     }
 
-    public function deletePage()
+    public function deletePage(ServerRequestInterface $request): ResponseInterface
     {
-        $pageName = $_GET['page'] ?? '';
-        
+        if (!$this->checkAuth()) {
+            return $this->redirect('/admin/login');
+        }
+
+        $queryParams = $request->getQueryParams();
+        $pageName = $queryParams['page'] ?? '';
+
         if ($pageName && !in_array($pageName, ['home', 'about', 'contact'])) {
             $this->contentManager->deletePage($pageName);
-            $this->redirect('/admin.php?action=manage_pages&deleted=1');
+            return $this->redirect('/admin/manage_pages?deleted=1');
         }
-        
-        $this->redirect('/admin.php?action=manage_pages');
+
+        return $this->redirect('/admin/manage_pages');
     }
 
-    public function managePosts()
+    public function managePosts(ServerRequestInterface $request): ResponseInterface
     {
+        if (!$this->checkAuth()) {
+            return $this->redirect('/admin/login');
+        }
+
         $postsData = $this->contentManager->getAllPosts();
-        
-        $this->template->render('admin/manage_posts', [
+
+        return $this->render('admin/manage_posts', [
             'title' => 'Управление статьями',
             'icon' => 'newspaper',
             'posts' => $postsData
         ]);
     }
 
-    public function managePages()
+    public function managePages(ServerRequestInterface $request): ResponseInterface
     {
+        if (!$this->checkAuth()) {
+            return $this->redirect('/admin/login');
+        }
+
         $pagesData = $this->contentManager->getAllPages();
-        
+
         // Преобразуем данные для отображения
         $pages = [];
         foreach ($pagesData as $pageData) {
@@ -224,27 +294,19 @@ public function editPage()
                 'title' => $pageData['meta']['title'] ?? $pageData['slug'] // заголовок из front matter
             ];
         }
-        
-        $this->template->render('admin/manage_pages', [
+
+        return $this->render('admin/manage_pages', [
             'title' => 'Управление страницами',
             'icon' => 'file',
             'pages' => $pages
         ]);
     }
-    
-    private function isLoginPage()
+
+    private function checkAuth(): bool
     {
-        return ($_GET['action'] ?? '') === 'login';
-    }
-    
-    private function redirect($url)
-    {
-        if (!headers_sent()) {
-            header('Location: ' . $url);
-            exit;
-        } else {
-            echo '<script>window.location.href="' . $url . '";</script>';
-            exit;
+        if (!Auth::check()) {
+            return false;
         }
+        return true;
     }
 }

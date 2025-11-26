@@ -6,50 +6,63 @@ class Template
 {
     public function render($view, $data = [])
     {
-        extract($data);
-        
+        // Извлекаем переменные
+        extract($data, EXTR_SKIP);
+
         $view = ltrim($view, '/');
-        
+
+        // Определяем путь к view файлу
+        $viewPath = $this->findViewFile($view);
+
+        if (!$viewPath) {
+            throw new \Exception("View '{$view}' not found. Searched in: " . implode(', ', [
+                    TEMPLATE_PATH . '/pages/' . $view . '.php',
+                    TEMPLATE_PATH . '/admin/' . $view . '.php',
+                    TEMPLATE_PATH . '/' . $view . '.php'
+                ]));
+        }
+
+        // Буферизуем view
+        ob_start();
+        include $viewPath;
+        $content = ob_get_clean();
+
+        // Определяем layout
+        $layoutPath = $this->getLayoutPath($view);
+
+        // Если layout существует, рендерим через него
+        if ($layoutPath && file_exists($layoutPath)) {
+            ob_start();
+            include $layoutPath;
+            return ob_get_clean();
+        }
+
+        return $content;
+    }
+
+    private function findViewFile($view): ?string
+    {
         $possiblePaths = [
             TEMPLATE_PATH . '/pages/' . $view . '.php',
             TEMPLATE_PATH . '/admin/' . $view . '.php',
             TEMPLATE_PATH . '/' . $view . '.php',
-            str_replace('admin/admin/', 'admin/', TEMPLATE_PATH . '/' . $view . '.php')
         ];
-        
-        $possiblePaths = array_unique($possiblePaths);
-        
-        $viewPath = null;
+
         foreach ($possiblePaths as $path) {
             if (file_exists($path)) {
-                $viewPath = $path;
-                break;
+                return $path;
             }
         }
-        
-        if (!$viewPath) {
-            throw new \Exception("View '{$view}' not found");
-        }
-        
-        // Буферизуем контент
-        ob_start();
-        include $viewPath;
-        $content = ob_get_clean();
-        
-        // Определяем layout
+
+        return null;
+    }
+
+    private function getLayoutPath($view): string
+    {
         if (strpos($view, 'admin/') === 0) {
-            $layoutPath = TEMPLATE_PATH . '/layouts/admin.php';
+            return TEMPLATE_PATH . '/layouts/admin.php';
         } else {
-            $layoutPath = TEMPLATE_PATH . '/layouts/main.php';
+            return TEMPLATE_PATH . '/layouts/main.php';
         }
-        
-        // Если layout существует, рендерим через него
-        if (file_exists($layoutPath)) {
-            include $layoutPath;
-        } else {
-            echo $content;
-        }
-        
-        return '';
     }
 }
