@@ -38,12 +38,53 @@ $saved = $saved ?? false;
                       class="form-control"><?= htmlspecialchars($content) ?></textarea>
 
             <div class="markdown-help">
-                <strong>Подсказка по разметке:</strong><br>
-                <code>## Заголовок</code> - заголовок<br>
-                <code>**жирный**</code> - жирный текст<br>
-                <code>*курсив*</code> - курсив<br>
-                <code>- пункт</code> - список<br>
-                <code>[текст](ссылка)</code> - ссылка
+                <strong>📝 Подсказка по разметке Markdown:</strong>
+                <div class="help-examples">
+                    <div class="help-item">
+                        <span class="help-code"># Заголовок 1</span>
+                        <span class="help-desc">- заголовок первого уровня</span>
+                    </div>
+                    <div class="help-item">
+                        <span class="help-code">## Заголовок 2</span>
+                        <span class="help-desc">- заголовок второго уровня</span>
+                    </div>
+                    <div class="help-item">
+                        <span class="help-code">**жирный**</span>
+                        <span class="help-desc">- жирный текст</span>
+                    </div>
+                    <div class="help-item">
+                        <span class="help-code">*курсив*</span>
+                        <span class="help-desc">- курсив</span>
+                    </div>
+                    <div class="help-item">
+                        <span class="help-code">- пункт списка</span>
+                        <span class="help-desc">- маркированный список</span>
+                    </div>
+                    <div class="help-item">
+                        <span class="help-code">1. пункт</span>
+                        <span class="help-desc">- нумерованный список</span>
+                    </div>
+                    <div class="help-item">
+                        <span class="help-code">[текст](https://ссылка)</span>
+                        <span class="help-desc">- ссылка</span>
+                    </div>
+                    <div class="help-item">
+                        <span class="help-code">`встроенный код`</span>
+                        <span class="help-desc">- код в строке</span>
+                    </div>
+                    <div class="help-item">
+                        <span class="help-code">```php\nкод\n```</span>
+                        <span class="help-desc">- блок кода с подсветкой</span>
+                    </div>
+                    <div class="help-item">
+                        <span class="help-code">![Alt текст](/media/photo.jpg)</span>
+                        <span class="help-desc">- изображение</span>
+                    </div>
+                    <div class="help-item">
+                        <span class="help-code">> цитата</span>
+                        <span class="help-desc">- блок цитаты</span>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -104,13 +145,13 @@ $saved = $saved ?? false;
     }
 
     .markdown-help {
-        margin-top: 0.5rem;
-        padding: 1rem;
-        background: #f3f4f6;
-        border-radius: 6px;
-        font-size: 0.9rem;
-        color: #6b7280;
+        margin-top: 1rem;
+        padding: 1.5rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+        border-left: 4px solid #4361ee;
     }
+
 
     .markdown-help code {
         background: #e5e7eb;
@@ -136,9 +177,39 @@ $saved = $saved ?? false;
         background: #f9fafb;
     }
 
+    .help-code {
+        background: #e9ecef;
+        padding: 0.3rem 0.6rem;
+        border-radius: 4px;
+        font-family: 'Courier New', monospace;
+        font-size: 0.9rem;
+        min-width: 200px;
+        margin-right: 1rem;
+        border: 1px solid #dee2e6;
+    }
+    .help-desc {
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+    .markdown-help strong {
+        color: #4361ee;
+        display: block;
+        margin-bottom: 0.5rem;
+        font-size: 1rem;
+    }
+
+
     @media (max-width: 768px) {
-        .form-actions {
+        .help-item {
             flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .help-code {
+            margin-right: 0;
+            margin-bottom: 0.3rem;
+            min-width: auto;
+            width: 100%;
         }
     }
 </style>

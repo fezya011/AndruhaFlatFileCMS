@@ -38,31 +38,33 @@ $title = $title ?? 'Статья';
     .post-content {
         line-height: 1.7;
         font-size: 1.1rem;
+        color: #e2e8f0; /* Светло-серый для основного текста */
     }
 
     .post-content h1 {
-        color: var(--primary);
+        color: #ffffff; /* Белый для заголовков */
         margin-bottom: 1rem;
     }
 
     .post-content h2 {
-        color: var(--dark);
+        color: #f7fafc; /* Очень светлый серый */
         margin: 2rem 0 1rem 0;
     }
 
     .post-content h3 {
-        color: var(--dark);
+        color: #edf2f7; /* Светлый серый */
         margin: 1.5rem 0 1rem 0;
     }
 
     .post-content p {
         margin-bottom: 1.2rem;
-        color: #4a5568;
+        color: #e2e8f0; /* Светло-серый */
     }
 
     .post-content ul, .post-content ol {
         margin: 1rem 0;
         padding-left: 2rem;
+        color: #e2e8f0; /* Светло-серый */
     }
 
     .post-content li {
@@ -70,38 +72,46 @@ $title = $title ?? 'Статья';
     }
 
     .post-content code {
-        background: #f7fafc;
+        background: rgba(255, 255, 255, 0.1);
         padding: 0.2rem 0.4rem;
         border-radius: 4px;
         font-family: 'Courier New', monospace;
-        color: #e53e3e;
+        color: #ff79c6;
     }
 
     .post-content pre {
-        background: #1a202c;
-        color: #e2e8f0;
-        padding: 1rem;
+        background: #1a1a1a;
+        color: #f8f8f2;
+        padding: 1.5rem;
         border-radius: 8px;
         overflow-x: auto;
         margin: 1.5rem 0;
+        border: 1px solid #333;
+        font-family: 'Courier New', monospace;
+        font-size: 0.9rem;
+        line-height: 1.4;
     }
 
     .post-content pre code {
         background: none;
-        color: inherit;
         padding: 0;
+        color: inherit;
     }
+
 
     .post-content blockquote {
         border-left: 4px solid var(--primary);
         padding-left: 1rem;
         margin: 1.5rem 0;
-        color: #718096;
+        color: #cbd5e0; /* Средний серый для цитат */
         font-style: italic;
+        background: rgba(255, 255, 255, 0.05);
+        padding: 1rem;
+        border-radius: 0 8px 8px 0;
     }
 
     .post-meta {
-        color: #718096;
+        color: #a0aec0; /* Серый для мета-информации */
         font-size: 0.9rem;
         margin-top: 0.5rem;
     }
@@ -112,4 +122,41 @@ $title = $title ?? 'Статья';
         align-items: center;
         flex-wrap: wrap;
     }
+
+    /* Стили для ссылок в контенте */
+    .post-content a {
+        color: #90cdf4; /* Светло-голубой для ссылок */
+        text-decoration: none;
+        border-bottom: 1px solid transparent;
+        transition: all 0.3s;
+    }
+
+    .post-content a:hover {
+        color: #63b3ed; /* Ярче при наведении */
+        border-bottom-color: #63b3ed;
+    }
+
+    /* Улучшаем читаемость сильных элементов */
+    .post-content strong {
+        color: #ffffff; /* Белый для жирного текста */
+    }
+
+    .post-content em {
+        color: #e2e8f0; /* Светло-серый для курсива */
+    }
+
+    .language-csharp .keyword { color: #ff79c6; }
+    .language-csharp .type { color: #8be9fd; }
+    .language-csharp .string { color: #f1fa8c; }
+    .language-csharp .comment { color: #6272a4; }
+    .language-csharp .number { color: #bd93f9; }
+
+    .language-php .keyword { color: #ff79c6; }
+    .language-php .function { color: #50fa7b; }
+    .language-php .string { color: #f1fa8c; }
+    .language-php .comment { color: #6272a4; }
+
+    .language-javascript .keyword { color: #ff79c6; }
+    .language-javascript .function { color: #50fa7b; }
+    .language-javascript .string { color: #f1fa8c; }
 </style>

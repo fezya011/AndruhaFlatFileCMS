@@ -60,17 +60,13 @@ class PageController extends BaseController
 
     public function showPost(ServerRequestInterface $request, array $args): ResponseInterface
     {
-        // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        echo '<pre>';print_r($request->getAttribute('slug'));echo '</pre>';exit();
-        // +++++++++++++++++++++++++++++++++++++++++++++
         try {
-            $route = $request->getAttribute('route');
-            $postSlug = '';
 
-            if ($route) {
-                $routeArgs = $route->getVars();
-                $postSlug = $routeArgs['slug'] ?? '';
-            }
+            $postSlug = $args['slug'] ?? '';
+            error_log("=== SHOW POST DEBUG ===");
+            error_log("Request URI: " . $request->getUri()->getPath());
+            error_log("Route args: " . print_r($args, true));
+            error_log("Post slug: " . $postSlug);
 
             if (empty($postSlug)) {
                 error_log("Empty post slug!");

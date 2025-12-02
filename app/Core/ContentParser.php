@@ -72,27 +72,33 @@ class ContentParser
         
         return $data;
     }
-    
+
     private function parseMarkdown($text)
     {
+
+        $text = $this->parseCodeBlocks($text);
+
+
         $rules = [
+            '/`([^`]+)`/' => '<code>$1</code>',
             '/^# (.*?)$/m' => '<h1>$1</h1>',
             '/^## (.*?)$/m' => '<h2>$1</h2>',
             '/^### (.*?)$/m' => '<h3>$1</h3>',
             '/\*\*(.*?)\*\*/' => '<strong>$1</strong>',
             '/\*(.*?)\*/' => '<em>$1</em>',
             '/^\s*-\s+(.*?)$/m' => '<li>$1</li>',
-            '/```(\w+)?\n(.*?)\n```/s' => '<pre><code class="$1">$2</code></pre>',
-            '/`(.*?)`/' => '<code>$1</code>',
+            '/^\s*\d+\.\s+(.*?)$/m' => '<li>$1</li>',
+            '/!\[([^\]]*)\]\(([^)]+)\)/' => '<img src="$2" alt="$1" style="max-width: 100%; height: auto; border-radius: 8px; margin: 1rem 0;">',
             '/\[(.*?)\]\((.*?)\)/' => '<a href="$2" target="_blank">$1</a>',
-            '/!\[(.*?)\]\((.*?)\)/' => '<img src="$2" alt="$1" style="max-width: 100%; height: auto;">',
+            '/^\s*>\s+(.*?)$/m' => '<blockquote>$1</blockquote>',
         ];
-        
+
         $html = $text;
         foreach ($rules as $pattern => $replacement) {
             $html = preg_replace($pattern, $replacement, $html);
         }
-        
+
+
         $html = preg_replace('/(<li>.*<\/li>)/s', '<ul>$1</ul>', $html);
         $html = preg_replace('/\n\s*\n/', '</p><p>', $html);
         $html = '<p>' . $html . '</p>';
@@ -100,7 +106,52 @@ class ContentParser
         $html = str_replace('</ul></p>', '</ul>', $html);
         $html = str_replace('<p><li>', '<li>', $html);
         $html = str_replace('</li></p>', '</li>', $html);
-        
+
         return $html;
     }
+
+    private function parseCodeBlocks($text)
+    {
+        // Разделяем текст на строки
+        $lines = explode("\n", $text);
+        $result = [];
+        $inCodeBlock = false;
+        $currentCode = [];
+        $language = '';
+
+        foreach ($lines as $line) {
+
+            if (preg_match('/^```(\w*)$/', trim($line), $matches)) {
+                if (!$inCodeBlock) {
+                    // Начало блока кода
+                    $inCodeBlock = true;
+                    $language = $matches[1] ?? '';
+                    $currentCode = [];
+                } else {
+
+                    $inCodeBlock = false;
+                    $codeContent = implode("\n", $currentCode);
+                    $escapedCode = htmlspecialchars($codeContent);
+                    $result[] = '<pre><code class="language-' . $language . '">' . $escapedCode . '</code></pre>';
+                }
+                continue;
+            }
+
+            if ($inCodeBlock) {
+                $currentCode[] = $line;
+            } else {
+                $result[] = $line;
+            }
+        }
+
+
+        if ($inCodeBlock && !empty($currentCode)) {
+            $codeContent = implode("\n", $currentCode);
+            $escapedCode = htmlspecialchars($codeContent);
+            $result[] = '<pre><code class="language-' . $language . '">' . $escapedCode . '</code></pre>';
+        }
+
+        return implode("\n", $result);
+    }
+
 }
