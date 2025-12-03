@@ -7,6 +7,21 @@ $postData = $postData ?? ['meta' => ['title' => '']];
 $saved = $saved ?? false;
 ?>
 
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+            rel="stylesheet"
+            href="/assets/easymde/easymde.min.css"
+    />
+    <script src="/assets/easymde/easymde.min.js.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
 <div class="admin-header">
     <h1><?= $isNew ? '➕ Новая статья' : '✏️ Редактирование статьи' ?></h1>
     <a href="/admin/manage_posts" class="btn btn-secondary">← Назад</a>
@@ -34,7 +49,7 @@ $saved = $saved ?? false;
 
         <div class="form-group">
             <label>Текст статьи *</label>
-            <textarea name="content" rows="20" required placeholder="Напишите вашу статью здесь..."
+            <textarea name="content" id="my-text-area" rows="20" required placeholder="Напишите вашу статью здесь..."
                       class="form-control"><?= htmlspecialchars($content) ?></textarea>
 
             <div class="markdown-help">
@@ -138,7 +153,6 @@ $saved = $saved ?? false;
     }
 
     textarea.form-control {
-        min-height: 400px;
         resize: vertical;
         font-family: 'Courier New', monospace;
         line-height: 1.5;
@@ -151,7 +165,6 @@ $saved = $saved ?? false;
         border-radius: 8px;
         border-left: 4px solid #4361ee;
     }
-
 
     .markdown-help code {
         background: #e5e7eb;
@@ -187,10 +200,12 @@ $saved = $saved ?? false;
         margin-right: 1rem;
         border: 1px solid #dee2e6;
     }
+
     .help-desc {
         color: #6c757d;
         font-size: 0.9rem;
     }
+
     .markdown-help strong {
         color: #4361ee;
         display: block;
@@ -198,6 +213,61 @@ $saved = $saved ?? false;
         font-size: 1rem;
     }
 
+    .help-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 0.5rem;
+        padding: 0.3rem 0;
+    }
+
+    .admin-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .alert {
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+        border-radius: 6px;
+        font-weight: 500;
+    }
+
+    .alert-success {
+        background-color: #d1fae5;
+        color: #065f46;
+        border: 1px solid #a7f3d0;
+    }
+
+    .btn {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        text-decoration: none;
+        font-weight: 500;
+        cursor: pointer;
+        border: none;
+        transition: background-color 0.2s;
+    }
+
+    .btn-primary {
+        background-color: #3b82f6;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background-color: #2563eb;
+    }
+
+    .btn-secondary {
+        background-color: #6b7280;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background-color: #4b5563;
+    }
 
     @media (max-width: 768px) {
         .help-item {
@@ -211,15 +281,127 @@ $saved = $saved ?? false;
             min-width: auto;
             width: 100%;
         }
+
+        .admin-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+    }
+
+    /* Стили для кнопок редактора */
+    .code-block-btn {
+        color: #6b7280;
+        padding: 4px 8px;
+        border-radius: 4px;
+        transition: background-color 0.2s;
+    }
+
+    .code-block-btn:hover {
+        background-color: #f3f4f6;
     }
 </style>
 
 <script>
+    // Инициализация EasyMDE редактора
+    const easymde = new EasyMDE({
+        element: document.getElementById('my-text-area'),
+        spellChecker: false,
+        autosave: {
+            enabled: false
+        },
+        placeholder: "Напишите вашу статью здесь...",
+        toolbar: [
+            {
+                name: "codeBlock",
+                action: function(editor) {
+                    // Получаем выбранный текст
+                    const selection = editor.codemirror.getSelection();
+
+                    if (selection) {
+                        // Если есть выделение - оборачиваем его в блок кода
+                        const wrappedText = "```\n" + selection + "\n```";
+                        editor.codemirror.replaceSelection(wrappedText);
+                    } else {
+                        // Если нет выделения - вставляем шаблон блока кода
+                        const cursor = editor.codemirror.getCursor();
+                        const line = editor.codemirror.getLine(cursor.line);
+
+                        if (line.trim() === "") {
+                            // Если пустая строка - вставляем полный блок
+                            const template = "```\n// Ваш код здесь\n```";
+                            editor.codemirror.replaceSelection(template);
+                        } else {
+                            // Если есть текст - оборачиваем всю строку
+                            editor.codemirror.setSelection(
+                                {line: cursor.line, ch: 0},
+                                {line: cursor.line, ch: line.length}
+                            );
+                            const wrappedText = "```\n" + line + "\n```";
+                            editor.codemirror.replaceSelection(wrappedText);
+                        }
+                    }
+
+                    // Фокусируемся на редакторе
+                    editor.codemirror.focus();
+                },
+                className: "fas fa-code",
+                title: "Вставить блок кода"
+            },
+            {
+                name: "quote",
+                action: function(editor) {
+                    // Получаем выбранный текст
+                    const selection = editor.codemirror.getSelection();
+
+                    if (selection) {
+                        // Если есть выделение - добавляем > к каждой строке
+                        const lines = selection.split('\n');
+                        const quotedLines = lines.map(line => '> ' + line).join('\n');
+                        editor.codemirror.replaceSelection(quotedLines);
+                    } else {
+                        // Если нет выделения - вставляем шаблон цитаты
+                        const cursor = editor.codemirror.getCursor();
+                        const line = editor.codemirror.getLine(cursor.line);
+
+                        if (line.trim() === "") {
+                            // Если пустая строка - вставляем полную цитату
+                            const template = "> Ваша цитата здесь";
+                            editor.codemirror.replaceSelection(template);
+                        } else {
+                            // Если есть текст - добавляем > к строке
+                            editor.codemirror.setSelection(
+                                {line: cursor.line, ch: 0},
+                                {line: cursor.line, ch: line.length}
+                            );
+                            const quotedLine = '> ' + line;
+                            editor.codemirror.replaceSelection(quotedLine);
+                        }
+                    }
+
+                    // Фокусируемся на редакторе
+                    editor.codemirror.focus();
+                },
+                className: "fas fa-quote-right",
+                title: "Вставить цитату"
+            },
+            '|',
+            'bold', 'italic', 'heading', '|',
+            'quote', 'unordered-list', 'ordered-list', '|',
+            'link', 'image', '|',
+            'preview', 'side-by-side', 'fullscreen', '|',
+            'guide'
+        ],
+        renderingConfig: {
+            codeSyntaxHighlighting: true
+        }
+    });
+
+    // Автогенерация slug из заголовка
     document.addEventListener('DOMContentLoaded', function() {
         const titleInput = document.querySelector('input[name="title"]');
         const slugInput = document.querySelector('input[name="slug"]');
 
-        // Автогенерация slug из заголовка
         if (titleInput && slugInput) {
             titleInput.addEventListener('input', function() {
                 if (slugInput.value === '' || !slugInput.hasAttribute('readonly')) {
@@ -243,3 +425,5 @@ $saved = $saved ?? false;
         }
     });
 </script>
+</body>
+</html>

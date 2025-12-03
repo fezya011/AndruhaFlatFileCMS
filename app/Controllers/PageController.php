@@ -45,7 +45,32 @@ class PageController extends BaseController
 
             $postsWithReadTime = [];
             foreach ($posts as $post) {
-                $post['read_time'] = $this->calculateReadTime($post['content'] ?? '');
+                // Логирование перед расчетом
+                $rawContent = $post['content'] ?? '';
+                $contentLength = strlen($rawContent);
+                $contentPreview = substr($rawContent, 0, 100) . '...';
+
+                $readTime = $this->calculateReadTime($rawContent);
+
+                // Подсчет слов для отладки
+                $text = preg_replace('/^---\s*\n.*?\n---/s', '', $rawContent);
+                $text = strip_tags($text);
+                $text = preg_replace('/[#*`>\[\]\(\)!-+]+/', '', $text);
+                $text = preg_replace('/\s+/', ' ', $text);
+                $text = trim($text);
+
+                preg_match_all('/[а-яёa-z]+/ui', $text, $matches);
+                $wordCount = count($matches[0] ?? []);
+
+                error_log("=== ARTICLE DEBUG ===");
+                error_log("Post title: " . ($post['meta']['title'] ?? 'Untitled'));
+                error_log("Content length: " . $contentLength . " chars");
+                error_log("Content preview: " . $contentPreview);
+                error_log("Word count (cleaned): " . $wordCount);
+                error_log("Calculated read time: " . $readTime . " min");
+                error_log("=== END DEBUG ===");
+
+                $post['read_time'] = $readTime;
                 $postsWithReadTime[] = $post;
             }
 
@@ -148,10 +173,30 @@ class PageController extends BaseController
 
     private function calculateReadTime($content): int
     {
-        $text = strip_tags($content ?? '');
-        $wordCount = str_word_count($text);
+        // Удаляем YAML фронт-меттер
+        $text = preg_replace('/^---\s*\n.*?\n---/s', '', $content ?? '');
+
+        // Удаляем HTML теги и Markdown разметку
+        $text = strip_tags($text);
+
+        // Удаляем Markdown синтаксис
+        $text = preg_replace('/[#*`>\[\]\(\)!-+]+/', '', $text);
+
+        // Удаляем лишние пробелы и переводы строк
+        $text = preg_replace('/\s+/', ' ', $text);
+        $text = trim($text);
+
+        // Подсчитываем слова (русские и английские)
+        $wordCount = 0;
+        if (preg_match_all('/[а-яёa-z]+/ui', $text, $matches)) {
+            $wordCount = count($matches[0]);
+        }
+
+        // Рассчитываем время (200 слов в минуту)
         $minutes = ceil($wordCount / 200);
-        return max(1, $minutes);
+
+        // Минимум 1 минута, максимум для длинных статей
+        return max(1, min($minutes, 60));
     }
 
     private function getDefaultHomeContent(): array
